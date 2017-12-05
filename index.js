@@ -13,6 +13,9 @@ var SashidoS3Adapter = function SashidoS3Adapter(opts) {
     this._bucketPrefix = opts.bucketPrefix || '';
     this._baseUrl = opts.baseUrl;
     this._proxyUrl = opts.proxyUrl;
+    if (this._proxyUrl[this._proxyUrl.length - 1] !== '/') {
+        this._proxyUrl += '/';
+    }
 };
 
 SashidoS3Adapter.prototype._requestOpts = function _requestOpts(
