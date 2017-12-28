@@ -41,8 +41,12 @@ SashidoS3Adapter.prototype._requestPromise = function _requestPromise(opts) {
     return new Promise(function(resolve, reject) {
         request.post(opts, function(err, httpResponse, body) {
             if (err) {
+                console.error('[S3Adapter Error] - ' + JSON.stringify(err));
                 return reject(err);
             } else if (httpResponse.statusCode !== 200) {
+                console.error(
+                    '[S3Adapter StatusCode] - ' + httpResponse.statusCode
+                );
                 return reject();
             }
 
