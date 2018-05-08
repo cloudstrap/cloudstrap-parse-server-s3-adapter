@@ -66,7 +66,7 @@ SashidoS3Adapter.prototype.createFile = function createFile(
             formData: {
                 upload: {
                     value: data,
-                    options: { filename: filename }
+                    options: { filename: this._bucketPrefix + filename }
                 }
             }
         },
