@@ -1,6 +1,7 @@
 const request = require('request');
 const { Upload } = require('tus-js-client');
 
+const API_VERSION = 2;
 class SashidoS3Adapter {
     constructor({
         appId,
@@ -27,6 +28,7 @@ class SashidoS3Adapter {
         if (this._proxyUrl[this._proxyUrl.length - 1] !== '/') {
             this._proxyUrl += '/';
         }
+        this._proxyUrl += `${API_VERSION}/`;
     }
 
     _requestHeaders(headers) {
