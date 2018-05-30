@@ -1,23 +1,28 @@
 {
-  "name": "sashido-parse-server-s3-adapter",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/cloudstrap/sashido-parse-server-s3-adapter.git"
-  },
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/cloudstrap/sashido-parse-server-s3-adapter/issues"
-  },
-  "homepage": "https://github.com/cloudstrap/sashido-parse-server-s3-adapter#readme",
-  "dependencies": {
-    "lodash": "^4.17.4",
-    "request": "^2.83.0"
-  }
+    "name": "sashido-parse-server-s3-adapter",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "test": "mocha test --recursive"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/cloudstrap/sashido-parse-server-s3-adapter.git"
+    },
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/cloudstrap/sashido-parse-server-s3-adapter/issues"
+    },
+    "homepage": "https://github.com/cloudstrap/sashido-parse-server-s3-adapter#readme",
+    "dependencies": {
+        "request": "^2.83.0",
+        "tus-js-client": "^1.5.1"
+    },
+    "devDependencies": {
+        "assert": "^1.4.1",
+        "mocha": "^5.2.0",
+        "nock": "^9.3.0"
+    }
 }

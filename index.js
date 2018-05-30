@@ -1,135 +1,169 @@
-'use strict';
+const request = require('request');
+const { Upload } = require('tus-js-client');
 
-var request = require('request');
-var _ = require('lodash');
-
-var SashidoS3Adapter = function SashidoS3Adapter(opts) {
-    this._appId = opts.appId;
-    this._directAccess = opts.directAccess;
-    this._baseUrlDirect = opts.baseUrlDirect;
-    this._masterKey = opts.masterKey;
-    this._useAccelerateEndpoint = opts.useAccelerateEndpoint;
-    this._bucket = opts.bucket;
-    this._bucketPrefix = opts.bucketPrefix || '';
-    this._baseUrl = opts.baseUrl;
-    this._proxyUrl = opts.proxyUrl;
-    if (this._proxyUrl[this._proxyUrl.length - 1] !== '/') {
-        this._proxyUrl += '/';
-    }
-};
-
-SashidoS3Adapter.prototype._requestOpts = function _requestOpts(
-    endpoint,
-    ext,
-    headers
-) {
-    var opts = {
-        url: '' + this._proxyUrl + endpoint,
-        headers: _.extend(
-            {
-                'X-Parse-Application-Id': this._appId,
-                'X-Parse-Master-key': this._masterKey
-            },
-            headers
-        )
-    };
-
-    return _.extend(opts, ext);
-};
-
-SashidoS3Adapter.prototype._requestPromise = function _requestPromise(opts) {
-    return new Promise(function(resolve, reject) {
-        request.post(opts, function(err, httpResponse, body) {
-            if (err) {
-                console.error('[S3Adapter Error] - ' + JSON.stringify(err));
-                return reject(err);
-            } else if (httpResponse.statusCode !== 200) {
-                console.error(
-                    '[S3Adapter StatusCode] - ' + httpResponse.statusCode
-                );
-                return reject();
-            }
-
-            return resolve({ httpResponse: httpResponse, body: body });
-        });
-    });
-};
-
-SashidoS3Adapter.prototype.createFile = function createFile(
-    filename,
-    data,
-    contentType
-) {
-    var requestOpts = this._requestOpts(
-        'uploadFile',
-        {
-            formData: {
-                upload: {
-                    value: data,
-                    options: { filename: this._bucketPrefix + filename }
-                }
-            }
-        },
-        {
-            'X-Content-Type': contentType
+class SashidoS3Adapter {
+    constructor({
+        appId,
+        masterKey,
+        directAccess,
+        baseUrlDirect,
+        useAccelerateEndpoint,
+        bucket,
+        bucketPrefix,
+        baseUrl,
+        retryDelays,
+        proxyUrl
+    }) {
+        this._appId = appId;
+        this._masterKey = masterKey;
+        this._directAccess = directAccess;
+        this._baseUrlDirect = baseUrlDirect;
+        this._useAccelerateEndpoint = useAccelerateEndpoint;
+        this._bucket = bucket;
+        this._bucketPrefix = bucketPrefix || '';
+        this._baseUrl = baseUrl;
+        this._retryDelays = retryDelays || [0, 1000, 3000, 5000];
+        this._proxyUrl = proxyUrl;
+        if (this._proxyUrl[this._proxyUrl.length - 1] !== '/') {
+            this._proxyUrl += '/';
         }
-    );
+    }
 
-    return this._requestPromise(requestOpts).then(function(res) {
+    _requestHeaders(headers) {
         return {
-            location: res.body.location
+            'X-Parse-Application-Id': this._appId,
+            'X-Parse-Master-key': this._masterKey,
+            ...headers
         };
-    });
-};
-
-SashidoS3Adapter.prototype.deleteFile = function deleteFile(filename) {
-    var requestOpts = this._requestOpts('deleteFile', {
-        form: {
-            file: filename
-        }
-    });
-
-    return this._requestPromise(requestOpts).then(function(res) {
-        return res.body;
-    });
-};
-
-SashidoS3Adapter.prototype.getFileData = function getFileData(filename) {
-    var requestOpts = this._requestOpts('getObject', {
-        form: {
-            file: filename
-        }
-    });
-
-    return this._requestPromise(requestOpts).then(function(res) {
-        return Buffer.from(res.body);
-    });
-};
-
-SashidoS3Adapter.prototype.getFileLocation = function getFileLocation(
-    config,
-    filename
-) {
-    filename = encodeURIComponent(filename);
-    if (this._directAccess) {
-        if (this._baseUrl && this._baseUrlDirect) {
-            return this._baseUrl + '/' + filename;
-        } else if (this._baseUrl) {
-            return this._baseUrl + '/' + (this._bucketPrefix + filename);
-        } else {
-            var accelerate = this._useAccelerateEndpoint ? '-accelerate' : '';
-            return (
-                'https://' +
-                this._bucket +
-                '.s3' +
-                accelerate +
-                '.amazonaws.com/' +
-                (this._bucketPrefix + filename)
-            );
-        }
     }
-    return config.mount + '/files/' + config.applicationId + '/' + filename;
-};
+
+    _requestOpts(endpoint, ext, headers) {
+        const opts = {
+            url: '' + this._proxyUrl + endpoint,
+            headers: this._requestHeaders(headers)
+        };
+
+        return { ...opts, ...ext };
+    }
+
+    _requestPromise(opts) {
+        return new Promise(function(resolve, reject) {
+            request.post(opts, function(err, httpResponse, body) {
+                if (err) {
+                    console.error(
+                        `[S3Adapter Error] -> ${err.message ||
+                            JSON.stringify(err)}`
+                    );
+                    return reject(err);
+                } else if (httpResponse.statusCode !== 200) {
+                    console.error(
+                        `[S3Adapter StatusCode] -> ${httpResponse.statusCode}`
+                    );
+                    console.error(
+                        `[S3Adapter Error] -> ${httpResponse.statusMessage}}`
+                    );
+                    return reject(new Error(httpResponse.statusMessage));
+                }
+
+                return resolve({ httpResponse: httpResponse, body: body });
+            });
+        });
+    }
+
+    async deleteFile(filename) {
+        const requestOpts = this._requestOpts('deleteFile', {
+            form: {
+                file: filename
+            }
+        });
+
+        const res = await this._requestPromise(requestOpts);
+        return res.body;
+    }
+
+    async getFileData(filename) {
+        const requestOpts = this._requestOpts('getObject', {
+            form: {
+                file: filename
+            }
+        });
+
+        const res = await this._requestPromise(requestOpts);
+        return Buffer.from(res.body);
+    }
+
+    async getFileLocation(config, filename) {
+        filename = encodeURIComponent(filename);
+        if (this._directAccess) {
+            if (this._baseUrl && this._baseUrlDirect) {
+                return this._baseUrl + '/' + filename;
+            } else if (this._baseUrl) {
+                return this._baseUrl + '/' + (this._bucketPrefix + filename);
+            } else {
+                const accelerate = this._useAccelerateEndpoint
+                    ? '-accelerate'
+                    : '';
+                return (
+                    'https://' +
+                    this._bucket +
+                    '.s3' +
+                    accelerate +
+                    '.amazonaws.com/' +
+                    (this._bucketPrefix + filename)
+                );
+            }
+        }
+        return config.mount + '/files/' + config.applicationId + '/' + filename;
+    }
+
+    _newUpload({
+        filename,
+        data,
+        contentType,
+        onError,
+        onProgress,
+        onSuccess
+    }) {
+        return new Upload(data, {
+            endpoint: `${this._proxyUrl}2/files/`,
+            retryDelays: this._retryDelays,
+            metadata: {
+                filename: this._bucketPrefix + filename,
+                filetype: contentType
+            },
+            headers: this._requestHeaders(),
+            onError: onError,
+            onProgress: onProgress,
+            onSuccess: onSuccess
+        });
+    }
+
+    createFile(filename, data, contentType) {
+        return new Promise((resolve, reject) => {
+            const upload = this._newUpload({
+                filename,
+                data,
+                contentType,
+                onError(err) {
+                    console.error(`[S3Adapter Error] -> ${err.message}`);
+                    return reject(err);
+                },
+                onProgress(bytesUploaded, bytesTotal) {
+                    const percentage = (
+                        bytesUploaded /
+                        bytesTotal *
+                        100
+                    ).toFixed(2);
+                    console.log(bytesUploaded, bytesTotal, percentage + '%');
+                },
+                onSuccess() {
+                    return resolve({});
+                }
+            });
+            upload.start();
+        });
+    }
+}
 
 module.exports = SashidoS3Adapter;
 module.exports.default = SashidoS3Adapter;
