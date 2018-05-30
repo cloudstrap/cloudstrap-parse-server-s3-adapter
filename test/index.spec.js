@@ -3,7 +3,7 @@ const nock = require('nock');
 
 const SashidoS3Adapter = require('../');
 
-const url = 'http://proxy-url.com';
+const url = 'http://proxy-url.com/2';
 describe('sashido s3 adapter', () => {
     const adapter = new SashidoS3Adapter({
         appId: 'appId',

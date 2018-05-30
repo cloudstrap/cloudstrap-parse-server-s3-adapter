@@ -125,7 +125,7 @@ class SashidoS3Adapter {
         onSuccess
     }) {
         return new Upload(data, {
-            endpoint: `${this._proxyUrl}2/files/`,
+            endpoint: `${this._proxyUrl}/files/`,
             retryDelays: this._retryDelays,
             metadata: {
                 filename: this._bucketPrefix + filename,
