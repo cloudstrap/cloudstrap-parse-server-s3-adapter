@@ -23,12 +23,19 @@ class SashidoS3Adapter {
         this._bucket = bucket;
         this._bucketPrefix = bucketPrefix || '';
         this._baseUrl = baseUrl;
-        this._retryDelays = retryDelays || [0, 1000, 3000, 5000];
         this._proxyUrl = proxyUrl;
         if (this._proxyUrl[this._proxyUrl.length - 1] !== '/') {
             this._proxyUrl += '/';
         }
         this._proxyUrl += `${API_VERSION}/`;
+
+        this._retryDelays = [];
+        if (Array.isArray(retryDelays)) {
+            this._retryDelays = retryDelays.map(r => parseInt(r));
+        }
+        if (!Array.isArray(retryDelays) || !this._retryDelays.length) {
+            this._retryDelays = [0, 1000, 3000, 5000];
+        }
     }
 
     _requestHeaders(headers) {
