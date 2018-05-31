@@ -94,7 +94,7 @@ class SashidoS3Adapter {
         return Buffer.from(res.body);
     }
 
-    async getFileLocation(config, filename) {
+    getFileLocation(config, filename) {
         filename = encodeURIComponent(filename);
         if (this._directAccess) {
             if (this._baseUrl && this._baseUrlDirect) {
@@ -127,7 +127,7 @@ class SashidoS3Adapter {
         onSuccess
     }) {
         return new Upload(data, {
-            endpoint: `${this._proxyUrl}/files/`,
+            endpoint: `${this._proxyUrl}files/`,
             retryDelays: this._retryDelays,
             metadata: {
                 filename: this._bucketPrefix + filename,
@@ -159,7 +159,7 @@ class SashidoS3Adapter {
                     console.log(bytesUploaded, bytesTotal, percentage + '%');
                 },
                 onSuccess() {
-                    return resolve({});
+                    return resolve();
                 }
             });
             upload.start();
