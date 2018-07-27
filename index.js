@@ -79,6 +79,18 @@ class SashidoS3Adapter {
         });
     }
 
+    _uriIsEncoded(uri) {
+        try {
+            const decoded = decodeURIComponent(uri);
+            return decoded !== uri;
+        } catch (e) {
+            //an exception can occur if the string has a % symbol
+            //if there's only a % symbol without any suceeding characters
+            //that means it's already decoded
+            return false;
+        }
+    }
+
     async deleteFile(filename) {
         const requestOpts = this._requestOpts('deleteFile', {
             form: {
@@ -102,6 +114,19 @@ class SashidoS3Adapter {
     }
 
     getFileLocation(config, filename) {
+        let counter = 0;
+        //just in case, so we don't get into an infinite loop
+        //if someone encoded a filename more than 100 time, they basically
+        //brough it to themselves
+        while (this._uriIsEncoded(filename) && counter < 100) {
+            //make sure to normalize uris that have been encoded
+            //even more than once
+            //in the general case we will at most decode it once
+            filename = decodeURIComponent(filename);
+            counter++;
+        }
+
+        //after we are sure that the filename is decoded, let's encode it
         filename = encodeURIComponent(filename);
         if (this._directAccess) {
             if (this._baseUrl && this._baseUrlDirect) {
@@ -159,8 +184,7 @@ class SashidoS3Adapter {
                 },
                 onProgress(bytesUploaded, bytesTotal) {
                     const percentage = (
-                        bytesUploaded /
-                        bytesTotal *
+                        (bytesUploaded / bytesTotal) *
                         100
                     ).toFixed(2);
                     console.log(bytesUploaded, bytesTotal, percentage + '%');

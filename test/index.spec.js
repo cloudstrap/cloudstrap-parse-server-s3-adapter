@@ -10,7 +10,7 @@ describe('sashido s3 adapter', () => {
         masterKey: 'masterKey',
         bucket: 'bucket',
         bucketPrefix: 'bucket_prefix',
-        proxyUrl: url,
+        proxyUrl: 'http://proxy-url.com',
         retryDelays: [0, 20, 50]
     });
 
@@ -61,7 +61,7 @@ describe('sashido s3 adapter', () => {
             assert.equal(upload.file, data);
 
             const opts = upload.options;
-            assert.equal(opts.endpoint, `${url}/2/files/`);
+            assert.equal(opts.endpoint, `${url}/files/`);
             assert.deepEqual(opts.retryDelays, [0, 20, 50]);
             assert.deepEqual(opts.headers, {
                 'X-Parse-Application-Id': 'appId',
@@ -73,5 +73,34 @@ describe('sashido s3 adapter', () => {
             assert.equal(opts.metadata.filename, 'bucket_prefixtest.jpg');
             assert.equal(opts.metadata.filetype, 'jpeg');
         });
+    });
+
+    describe('getFileLocation', () => {
+        const cases = [
+            {
+                filename: 'sashido rlz',
+                expected: 'sashido%20rlz'
+            },
+            {
+                filename: 'sashido %rlz',
+                expected: 'sashido%20%25rlz'
+            },
+            {
+                filename:
+                    'sashido%252525252525252525252525252525252525252525252520rlz',
+                expected: 'sashido%20rlz'
+            },
+            {
+                filename: '',
+                expected: ''
+            }
+        ];
+
+        cases.forEach(({ filename, expected }) =>
+            it(`${filename} => ${expected}`, () => {
+                const result = adapter.getFileLocation({}, filename).split('/');
+                assert.equal(result[result.length - 1], expected);
+            })
+        );
     });
 });
