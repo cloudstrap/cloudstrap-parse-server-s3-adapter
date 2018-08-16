@@ -13,7 +13,8 @@ class SashidoS3Adapter {
         bucketPrefix,
         baseUrl,
         retryDelays,
-        proxyUrl
+        proxyUrl,
+        chunkSize
     }) {
         this._appId = appId;
         this._masterKey = masterKey;
@@ -36,6 +37,7 @@ class SashidoS3Adapter {
         if (!Array.isArray(retryDelays) || !this._retryDelays.length) {
             this._retryDelays = [0, 1000, 3000, 5000];
         }
+        this._chunkSize = chunkSize || 5242880; //5mb
     }
 
     _requestHeaders(headers) {
@@ -165,6 +167,7 @@ class SashidoS3Adapter {
                 filename: this._bucketPrefix + filename,
                 filetype: contentType
             },
+            chunkSize: this._chunkSize,
             headers: this._requestHeaders(),
             onError: onError,
             onProgress: onProgress,
